@@ -205,22 +205,33 @@ class MeshBuilder:
             node.on_boundary = True
         return
 
-    def nodeset(self, name: str, region: RegionSelector) -> None:
+    def nodeset(
+        self, name: str, region: RegionSelector | None = None, nodes: list[int] | None = None
+    ) -> None:
+        if region is None and nodes is None:
+            raise ValueError("Expected region or nodes")
+        elif region is not None and nodes is not None:
+            raise ValueError("Expected region or nodes, not both")
         nodesets = self.metadata["nodesets"]
-        if name in nodesets:
+        if name in [ns[0] for ns in nodesets.values()]:
             raise ValueError(f"Duplicate node set {name!r}")
-        nodesets[name] = region
+        nodesets[f"nodeset-{len(nodesets)}"] = (name, region, nodes)
 
     def construct_nodesets(self) -> None:
         if not self.assembled:
             raise ValueError("Assemble builder before adding constructing node sets")
         self.nodesets.clear()
         name: str
-        region: RegionSelector
-        for name, region in self.metadata.get("nodesets", {}).items():
-            for node in self.nodes:
-                if region(node.x, on_boundary=node.on_boundary):  # type: ignore
-                    self.nodesets[name].append(node.lid)
+        region: RegionSelector | None
+        nodes: list[int] | None
+        for name, region, nodes in self.metadata.get("nodesets", {}).values():
+            if region is not None:
+                for node in self.nodes:
+                    if region(node.x, on_boundary=node.on_boundary):  # type: ignore
+                        self.nodesets[name].append(node.lid)
+            elif nodes is not None:
+                for node in nodes:
+                    self.nodesets[name].append(self.node_map.local(node))
 
     def elemset(self, name: str, region: RegionSelector) -> None:
         elemsets = self.metadata["elemsets"]

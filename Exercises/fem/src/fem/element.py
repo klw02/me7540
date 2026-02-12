@@ -33,14 +33,7 @@ class Element(ABC):
     def node_freedom_table(self) -> list[tuple[int, ...]]: ...
 
     @abstractmethod
-    def area(self, p: NDArray) -> float:
-        """Find the area of the triangle subtended by points p
-
-        Args:
-            p: p[:,0] are the x points, p[:,1] are the y points
-
-        """
-        ...
+    def area(self, p: NDArray) -> float: ...
 
     @abstractmethod
     def side_centroid(self, side: int, p: NDArray) -> NDArray: ...
@@ -224,6 +217,12 @@ class CPX3(IsoparametricElement):
         ]
 
     def area(self, p: NDArray) -> float:
+        """Find the area of the triangle subtended by points p
+
+        Args:
+            p: p[:,0] are the x points, p[:,1] are the y points
+
+        """
         xp, yp = p[:, 0], p[:, 1]
         d = xp[0] * (yp[1] - yp[2]) + xp[1] * (yp[2] - yp[0]) + xp[2] * (yp[0] - yp[1])
         assert d > 0
