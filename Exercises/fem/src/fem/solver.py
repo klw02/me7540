@@ -58,7 +58,7 @@ class DirectSolver(Solver):
         d = np.zeros(n + m)
         d[ddofs] = dvals
         d[fdofs] = np.linalg.solve(
-            K[np.ix_(fdofs, fdofs)], R[fdofs] - np.dot(K[np.ix_(fdofs, ddofs)], d[ddofs])
+            K[np.ix_(fdofs, fdofs)], -R[fdofs] - np.dot(K[np.ix_(fdofs, ddofs)], d[ddofs])
         )
 
         react = np.zeros_like(R[:n])

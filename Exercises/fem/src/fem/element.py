@@ -175,7 +175,7 @@ class IsoparametricElement(Element):
                     traction = np.asarray(sload.value)
                 elif sload.load_type == PRESSURE:
                     n = self.edge_normal(sload.edge, p, xi)
-                    traction = float(sload.value) * n
+                    traction = -float(sload.value) * n
                 else:
                     traction = np.asarray(sload.value)
                 st = self.ref_edge_coords(sload.edge, xi)
