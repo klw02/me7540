@@ -184,6 +184,7 @@ class ModelBuilder:
         self.assembled = False
 
         self.mesh = mesh
+        self.mesh.freeze()
         self.blocks: list[ElementBlock] = []
 
         # dof_map[node, dof] -> global (model) dof

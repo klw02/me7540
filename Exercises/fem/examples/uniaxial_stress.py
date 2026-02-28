@@ -19,12 +19,11 @@ def exercise(esize: float = 0.05):
             return False
 
     nodes, elements = fem.meshing.plate_with_hole(esize=esize)
-    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
-    mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
-    mesh_builder.nodeset("Point", region=lambda x, on_boundary: abs(x[0]) < 0.05 and x[1] > 0.999)
-    mesh_builder.nodeset("Top", region=lambda x, on_boundary: x[1] > 0.99)
-    mesh_builder.sideset("Bottom", region=Bottom())
-    mesh = mesh_builder.build()
+    mesh = fem.mesh.Mesh(nodes=nodes, elements=elements)
+    mesh.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
+    mesh.nodeset("Point", region=lambda x, on_boundary: abs(x[0]) < 0.05 and x[1] > 0.999)
+    mesh.nodeset("Top", region=lambda x, on_boundary: x[1] > 0.99)
+    mesh.sideset("Bottom", region=Bottom())
 
     builder = fem.model.ModelBuilder(mesh, name="uniaxial_stress")
     material = fem.material.LinearElastic(density=2400.0, youngs_modulus=30.0e9, poissons_ratio=0.3)

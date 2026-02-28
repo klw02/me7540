@@ -16,10 +16,9 @@ def mpc():
 
     nodes = [[1, 0.0, 0.0], [2, 1.0, 0.0], [3, 1.0, 1.0], [4, 0.0, 1.0], [5, 0.5, 0.5]]
     elements = [[1, 1, 2, 5], [2, 2, 3, 5], [3, 3, 4, 5], [4, 4, 1, 5]]
-    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
-    mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
-    mesh_builder.nodeset("Boundary", nodes=[1, 2, 3, 4])
-    mesh = mesh_builder.build()
+    mesh = fem.mesh.Mesh(nodes=nodes, elements=elements)
+    mesh.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
+    mesh.nodeset("Boundary", nodes=[1, 2, 3, 4])
 
     m = fem.material.LinearElastic(density=2400.0, youngs_modulus=30.0e9, poissons_ratio=0.3)
     builder = fem.model.ModelBuilder(mesh, name="plate_with_hole")

@@ -41,12 +41,11 @@ def heat1(esize: float = 0.05):
             return False
 
     nodes, elements = fem.meshing.uniform_plate(esize=esize)
-    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
-    mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
-    mesh_builder.sideset("Top", region=Top())
-    mesh_builder.sideset("Bottom", region=Bottom())
-    mesh_builder.elemset("All", region=Everywhere())
-    mesh = mesh_builder.build()
+    mesh = fem.mesh.Mesh(nodes=nodes, elements=elements)
+    mesh.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
+    mesh.sideset("Top", region=Top())
+    mesh.sideset("Bottom", region=Bottom())
+    mesh.elemset("All", region=Everywhere())
 
     m = fem.material.HeatConduction(conductivity=12.0, specific_heat=1.0)
     builder = fem.model.ModelBuilder(mesh, name="heat1")
