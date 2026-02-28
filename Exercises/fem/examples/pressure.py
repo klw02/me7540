@@ -19,7 +19,7 @@ def exercise(esize: float = 0.05):
             return False
 
     nodes, elements = fem.meshing.plate_with_hole(esize=esize)
-    mesh_builder = fem.builder.MeshBuilder(nodes=nodes, elements=elements)
+    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
     mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
     mesh_builder.nodeset("Top Left", region=lambda x, on_boundary: x[0] < -0.99 and x[1] > 0.99)
     mesh_builder.nodeset("Top Right", region=lambda x, on_boundary: x[0] > 0.99 and x[1] > 0.99)
@@ -28,7 +28,7 @@ def exercise(esize: float = 0.05):
     mesh = mesh_builder.build()
 
     material = fem.material.LinearElastic(density=2400.0, youngs_modulus=30.0e9, poissons_ratio=0.3)
-    builder = fem.builder.ModelBuilder(mesh, name="Pressure")
+    builder = fem.model.ModelBuilder(mesh, name="Pressure")
     builder.assign_properties(block="Block-1", element=fem.element.CPS3(), material=material)
     step = builder.static_step()
     step.boundary(nodes="Top Right", dofs=[1], value=0.0)

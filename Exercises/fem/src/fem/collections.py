@@ -88,12 +88,22 @@ class BoundaryCondition(ABC):
 
 
 class Load(ABC):
+    _scale: float
+
     @property
     @abstractmethod
     def field(self) -> Field: ...
 
     @abstractmethod
     def __call__(self, *args: Any) -> Any: ...
+
+    @property
+    def scale(self) -> float:
+        return self._scale
+
+    @scale.setter
+    def scale(self, arg: float) -> None:
+        self._scale = arg
 
 
 class DistributedLoad(Load):
@@ -102,7 +112,8 @@ class DistributedLoad(Load):
     """
 
     def __init__(self, field: Field) -> None:
-        self._field = field
+        self._field: Field = field
+        self._scale = 1.0
 
     @property
     def field(self) -> Field:
@@ -132,7 +143,7 @@ class DistributedLoad(Load):
           ipt: Integration point number
           x: Coordinates of the load integration point
         """
-        return self._field(x, time)
+        return self.scale * self._field(x, time)
 
 
 class DistributedSurfaceLoad(Load):
@@ -142,6 +153,7 @@ class DistributedSurfaceLoad(Load):
 
     def __init__(self, field: Field) -> None:
         self._field = field
+        self._scale = 1.0
 
     @property
     def field(self) -> Field:
@@ -174,7 +186,7 @@ class DistributedSurfaceLoad(Load):
           ipt: Integration point number
           x: Coordinates of the load integration point
         """
-        return self._field(x, time)
+        return self.scale * self._field(x, time)
 
 
 class GravityLoad(DistributedLoad):
@@ -218,10 +230,10 @@ class PressureLoad(DistributedSurfaceLoad):
         x: Sequence[float],
         n: NDArray,
     ) -> NDArray:
-        return -self.field(x, time) * n
+        return -self.scale * self.field(x, time) * n
 
 
-class HeatSource(Load):
+class HeatSource(DistributedLoad):
     """
     Mass-proportional body force.
     """
@@ -243,7 +255,7 @@ class HeatSource(Load):
         ipt: int,
         x: Sequence[float],
     ) -> NDArray:
-        return np.array([self.field(x, time)])
+        return self.scale * np.array([self.field(x, time)])
 
 
 class HeatFlux(DistributedSurfaceLoad):
@@ -268,7 +280,7 @@ class HeatFlux(DistributedSurfaceLoad):
         n: NDArray,
     ) -> NDArray:
         # return -np.array([np.dot(self.field(x, time), n)])
-        return -np.array([np.dot(self.field(x, time), n)])
+        return -self.scale * np.array([np.dot(self.field(x, time), n)])
 
 
 @dataclass

@@ -1,8 +1,8 @@
-from . import builder
 from . import cell
 from . import collections
 from . import element
 from . import material
+from . import mesh
 from . import meshing
 from . import model
 from . import plotting
@@ -12,11 +12,11 @@ from .constants import Y
 from .constants import Z
 
 __all__ = [
-    "builder",
     "cell",
     "collections",
     "element",
     "material",
+    "mesh",
     "meshing",
     "model",
     "plotting",

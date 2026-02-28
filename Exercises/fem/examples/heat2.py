@@ -57,7 +57,7 @@ def heat2(esize: float = 0.05):
             return 1000.0 / np.sqrt(x[0] ** 2 + x[1] ** 2)
 
     nodes, elements = fem.meshing.plate_with_hole(esize=esize)
-    mesh_builder = fem.builder.MeshBuilder(nodes=nodes, elements=elements)
+    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
     mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
     mesh_builder.nodeset("LHS", region=Left())
     mesh_builder.nodeset("RHS", region=Right())
@@ -67,7 +67,7 @@ def heat2(esize: float = 0.05):
     mesh = mesh_builder.build()
 
     m = fem.material.HeatConduction(conductivity=12.0, specific_heat=1.0)
-    builder = fem.builder.ModelBuilder(mesh, name="heat2")
+    builder = fem.model.ModelBuilder(mesh, name="heat2")
     builder.assign_properties(block="Block-1", element=fem.element.DCP3(), material=m)
     step = builder.heat_transfer_step()
     step.temperature(nodes="LHS", value=200.0)

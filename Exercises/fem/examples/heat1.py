@@ -41,7 +41,7 @@ def heat1(esize: float = 0.05):
             return False
 
     nodes, elements = fem.meshing.uniform_plate(esize=esize)
-    mesh_builder = fem.builder.MeshBuilder(nodes=nodes, elements=elements)
+    mesh_builder = fem.mesh.MeshBuilder(nodes=nodes, elements=elements)
     mesh_builder.block(name="Block-1", region=Everywhere(), cell_type=fem.cell.Tri3)
     mesh_builder.sideset("Top", region=Top())
     mesh_builder.sideset("Bottom", region=Bottom())
@@ -49,7 +49,7 @@ def heat1(esize: float = 0.05):
     mesh = mesh_builder.build()
 
     m = fem.material.HeatConduction(conductivity=12.0, specific_heat=1.0)
-    builder = fem.builder.ModelBuilder(mesh, name="heat1")
+    builder = fem.model.ModelBuilder(mesh, name="heat1")
     builder.assign_properties(block="Block-1", element=fem.element.DCP3(), material=m)
     step = builder.heat_transfer_step()
     step.film(sideset="Top", h=250.0, ambient_temp=25.0)

@@ -24,6 +24,8 @@ class Element(ABC):
     All concrete element types must implement required abstract methods.
     """
 
+    family: str
+
     @property
     @abstractmethod
     def node_freedom_table(self) -> list[tuple[int, ...]]:

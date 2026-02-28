@@ -81,11 +81,13 @@ def tplot3d(
     triang = tri.Triangulation(p[:, 0], p[:, 1], t)
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_subplot(projection="3d")
-    surf = ax.plot_trisurf(triang, z, cmap="turbo", linewidth=0.2, antialiased=True)
+    surf = ax.plot_trisurf(  # type: ignore
+        triang, z, cmap="turbo", linewidth=0.2, antialiased=True
+    )
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     if label:
-        ax.set_zlabel(label)
+        ax.set_zlabel(label)  # type: ignore
     fig.colorbar(surf, ax=ax, shrink=0.6, label=label)
 
     plt.title(title)
