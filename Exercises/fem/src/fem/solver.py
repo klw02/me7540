@@ -2,13 +2,10 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
-
-from .collections import Solution
 
 if TYPE_CHECKING:
     pass
@@ -24,7 +21,15 @@ class SolverState:
 
 class Solver(ABC):
     @abstractmethod
-    def __call__(self, *args: Any, **kwargs: Any) -> Solution: ...
+    def __call__(
+        self,
+        fun: Callable[..., tuple[NDArray, NDArray]],
+        x0: NDArray,
+        args: tuple = (),
+        atol: float | None = None,
+        rtol: float | None = None,
+        maxiter: int | None = None,
+    ) -> SolverState: ...
 
 
 class DirectSolver(Solver):
@@ -39,8 +44,17 @@ class DirectSolver(Solver):
     by the calling Step.
     """
 
-    def __call__(self, K: NDArray, R: NDArray) -> SolverState:  # type: ignore
+    def __call__(
+        self,
+        fun: Callable[..., tuple[NDArray, NDArray]],
+        x0: NDArray,
+        args: tuple = (),
+        atol: float | None = None,
+        rtol: float | None = None,
+        maxiter: int | None = None,
+    ) -> SolverState:
         try:
+            K, R = fun(x0, *args)
             x = np.linalg.solve(K, -R)
         except np.linalg.LinAlgError as e:
             raise RuntimeError("Linear solve failed.") from e

@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
 from typing import TYPE_CHECKING
+from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -76,7 +77,7 @@ class CompiledStep(ABC):
         self._solution: Solution | None = None
 
     @abstractmethod
-    def solve(self, model: "Model") -> Solution: ...
+    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> NDArray: ...
 
     @property
     def solution(self) -> Solution:

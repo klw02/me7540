@@ -23,7 +23,7 @@ class Simulation:
         self.csteps: list[CompiledStep] = []
 
         # Solution and residual storage
-        self.dofs: NDArray = np.zeros((2, self.model.num_dof))
+        self.dofs: NDArray = np.zeros((2, self.model.ndof))
 
     def advance_state(self) -> None:
         """
@@ -62,10 +62,10 @@ class Simulation:
         the Exodus output file.
         """
         file = ExodusFile(self.model)
-        parent = None
+        parent: CompiledStep | None = None
         for i, step in enumerate(self.steps):
             cstep = step.compile(self.model, parent=parent)
-            cstep.solve(self.model)
+            self.model.u[1] = cstep.solve(self.model.assemble, self.model.u[0])
             self.model.advance_state()
             file.update(i + 1, cstep)
             parent = cstep

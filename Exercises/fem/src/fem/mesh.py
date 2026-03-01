@@ -71,9 +71,9 @@ class Mesh:
         self.node_map = collections.Map([int(node[0]) for node in nodes])
         self.elem_map = collections.Map([int(elem[0]) for elem in elements])
 
-        num_node: int = len(nodes)
+        nnode: int = len(nodes)
         max_dim: int = max(len(n[1:]) for n in nodes)
-        self.coords = np.zeros((num_node, max_dim), dtype=float)
+        self.coords = np.zeros((nnode, max_dim), dtype=float)
         self.nodes = []
         for i, node in enumerate(nodes):
             xc = [float(x) for x in node[1:]]
@@ -81,9 +81,9 @@ class Mesh:
             ni = collections.Node(lid=i, gid=int(node[0]), x=xc)
             self.nodes.append(ni)
 
-        num_elem: int = len(elements)
+        nelem: int = len(elements)
         max_elem: int = max(len(e[1:]) for e in elements)
-        self.connect = -np.ones((num_elem, max_elem), dtype=int)
+        self.connect = -np.ones((nelem, max_elem), dtype=int)
         errors: int = 0
         for i, element in enumerate(elements):
             for j, gid in enumerate(element[1:]):
@@ -189,8 +189,8 @@ class _MeshBuilder:
             mesh._blocks.append(block)
 
         # Check if all elements are assigned to a topo block
-        num_elements = mesh.connect.shape[0]
-        if unassigned := set(range(num_elements)).difference(assigned):
+        nelem = mesh.connect.shape[0]
+        if unassigned := set(range(nelem)).difference(assigned):
             s = ", ".join(str(_) for _ in unassigned)
             raise ValueError(f"Elements {s} not assigned to any element blocks")
 

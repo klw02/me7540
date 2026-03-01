@@ -39,7 +39,7 @@ def exercise(esize: float = 0.05):
     simulation.run()
     solution = simulation.csteps[0].solution
 
-    u = solution.dofs
+    u = solution.dofs.reshape((model.nnode, -1))
     U = np.linalg.norm(u, axis=1)
     print(np.amax(U))
 

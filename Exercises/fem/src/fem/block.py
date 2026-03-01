@@ -82,10 +82,10 @@ class ElementBlock:
         self.material = material
         self.node_map = node_map
         self.elem_map = elem_map
-        self.num_nodes = self.coords.shape[0]
-        self.num_dof = self.num_nodes * self.element.dof_per_node
+        self.nnode = self.coords.shape[0]
+        self.ndof = self.nnode * self.element.dof_per_node
         # dof_map[node, dof] -> block (global) dof
-        self.dof_map = np.arange(self.num_dof, dtype=int).reshape(self.num_nodes, -1)
+        self.dof_map = np.arange(self.ndof, dtype=int).reshape(self.nnode, -1)
 
         # Integration point data
         nvars = len(self.element.history_variables())
@@ -134,8 +134,8 @@ class ElementBlock:
         rloads: dict[int, list[RobinLoad]] | None = None,
     ) -> tuple[NDArray, NDArray]:
         self.pdata[1, :] = self.pdata[0, :]
-        K = np.zeros((self.num_dof, self.num_dof), dtype=float)
-        R = np.zeros(self.num_dof, dtype=float)
+        K = np.zeros((self.ndof, self.ndof), dtype=float)
+        R = np.zeros(self.ndof, dtype=float)
         dloads = dloads or {}
         dsloads = dsloads or {}
         rloads = rloads or {}

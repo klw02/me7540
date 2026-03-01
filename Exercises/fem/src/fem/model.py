@@ -37,7 +37,7 @@ class Model:
         self._node_freedom_types: list[int] = []
         self._block_dof_map: NDArray = np.empty((0, 0), dtype=int)
         self._dof_map: NDArray = np.empty((0, 0), dtype=int)
-        self._num_dof: int = -1
+        self._ndof: int = -1
 
         self.u = np.empty((0, 0), dtype=float)
         self.R = np.empty((0, 0), dtype=float)
@@ -46,8 +46,8 @@ class Model:
         if not self._frozen:
             self._builder.build()
             self._frozen = True
-            self.u = np.zeros((2, self.num_dof), dtype=float)
-            self.R = np.zeros((2, self.num_dof), dtype=float)
+            self.u = np.zeros((2, self.ndof), dtype=float)
+            self.R = np.zeros((2, self.ndof), dtype=float)
 
     @frozen_property
     def blocks(self) -> list[ElementBlock]:
@@ -70,8 +70,8 @@ class Model:
         return self._dof_map
 
     @frozen_property
-    def num_dof(self) -> int:
-        return self._num_dof
+    def ndof(self) -> int:
+        return self._ndof
 
     @property
     def nnode(self) -> int:
@@ -165,8 +165,8 @@ class Model:
         Returns:
             Tuple of (K_global, R_global)
         """
-        K = np.zeros((self.num_dof, self.num_dof), dtype=float)
-        R = np.zeros(self.num_dof, dtype=float)
+        K = np.zeros((self.ndof, self.ndof), dtype=float)
+        R = np.zeros(self.ndof, dtype=float)
         for b, block in enumerate(self.blocks):
             bft = self.block_freedom_table(b)
             kb, rb = block.assemble(
@@ -189,7 +189,7 @@ class Model:
         Return the compact global DOFs for the entire block.
         """
         dof_per_node = self.blocks[blockno].element.dof_per_node
-        nnode = self.blocks[blockno].num_nodes
+        nnode = self.blocks[blockno].nnode
         n_block_dof = nnode * dof_per_node
         return self.block_dof_map[blockno, :n_block_dof]
 
@@ -230,7 +230,7 @@ class _ModelBuilder:
                 1 if the DOF is active at the node, 0 otherwise
             self._node_freedom_types : ndarray[int] of length n_active_dofs
                 Physical DOF type corresponding to each column (Ux, Uy, ..., T)
-            self.num_dof : int
+            self.ndof : int
                 Total number of active DOFs in the model
         """
 
@@ -268,7 +268,7 @@ class _ModelBuilder:
         # -----------------------------
         self.model._node_freedom_table = node_sig_full[:, active_cols].copy()
         self.model._node_freedom_types = active_cols.tolist()
-        self.model._num_dof = int(self.model._node_freedom_table.sum())
+        self.model._ndof = int(self.model._node_freedom_table.sum())
 
     def build_dof_map(self) -> None:
         """
@@ -297,14 +297,14 @@ class _ModelBuilder:
             bft = self.block_dof_map[blockno, :n_block_dof]
         """
         # Determine max DOFs per block
-        max_block_dofs = max(b.num_dof for b in self.model._blocks)
+        max_block_dofs = max(b.ndof for b in self.model._blocks)
 
         # Initialize table with -1
         self.model._block_dof_map = -np.ones((len(self.model._blocks), max_block_dofs), dtype=int)
 
         for blockno, block in enumerate(self.model._blocks):
             local_dof_idx = 0
-            for i in range(block.num_nodes):
+            for i in range(block.nnode):
                 gid = block.node_map[i]
                 lid = self.model.mesh.node_map.local(gid)
                 for dof_type in block.element.node_freedom_table[0]:

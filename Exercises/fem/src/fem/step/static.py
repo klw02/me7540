@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Callable
 from typing import Sequence
 
 import numpy as np
@@ -20,9 +21,9 @@ from ..solver import NonlinearNewtonSolver
 from ..typing import DLoadT
 from ..typing import DSLoadT
 from ..typing import RLoadT
+from .assemble import AssembleKernel
 from .base import CompiledStep
 from .base import Step
-from .constraint import build_linear_constraint
 
 if TYPE_CHECKING:
     from ..model import Model
@@ -236,158 +237,47 @@ class StaticStep(Step):
 class CompiledStaticStep(CompiledStep):
     solver_options: dict[str, Any] = field(default_factory=dict)
 
-    def solve(self, model: "Model") -> Solution:
+    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> NDArray:
         ddofs = self.ddofs
         dvals = self.dvals[1, :]  # Target Dirichlet values at end of step
-        fdofs = np.array(sorted(set(range(model.num_dof)) - set(ddofs)))
+        ndof = len(u0)
+        fdofs = np.array(sorted(set(range(ndof)) - set(ddofs)))
         nf = len(fdofs)
         neq = len(self.equations) if self.equations else 0
 
-        def fun(x: NDArray, model: "Model", step: "CompiledStep"):
-            """
-            Assemble the nonlinear equilibrium system for the current Newton iterate.
-
-            Parameters
-            ----------
-            x : NDArray
-                Current Newton unknown vector.
-
-                If no linear constraint equations are present:
-                    x = u_f
-                    where u_f are the free (non-Dirichlet) displacement DOFs.
-
-                If linear constraint equations are present:
-                    x = [u_f, λ]
-                    where:
-                        u_f : free displacement DOFs
-                        λ   : Lagrange multipliers associated with linear constraints.
-
-            model : Model
-                Finite element model containing the previously converged state
-                in model.u[0, :] and internal material variables.
-
-            step : StaticStep
-                Current load step definition.
-
-            Assembly Procedure
-            ------------------
-            1. Construct the full trial displacement vector:
-                   - Free DOFs are taken from x.
-                   - Dirichlet DOFs are enforced strongly using prescribed values.
-                   - model.u[1, :] stores the full trial displacement.
-
-            2. Compute incremental displacement:
-                   du = model.u[1] - model.u[0]
-
-               This incremental field is passed to model.assemble(...) so that
-               material models receive strain increments relative to the last
-               converged configuration.
-
-            3. Assemble the full global stiffness matrix K and residual vector R:
-                   K, R = model.assemble(...)
-
-               These are the full ndof-sized system including Dirichlet DOFs.
-
-            4. Eliminate Dirichlet DOFs by extracting the reduced system:
-                   K_ff = K[fdofs, fdofs]
-                   R_f  = R[fdofs]
-
-               where fdofs are the free DOF indices.
-
-            Constraint Handling
-            -------------------
-            If linear constraint equations of the form
-
-                   C u = r
-
-            are present, a saddle-point (augmented) system is formed:
-
-                [ K_ff   C_f^T ] [ Δu_f ] = -[ R_f + C_f^T λ ]
-                [  C_f    0    ] [ Δλ   ]   [ C u - r        ]
-
-            where:
-                C_f : constraint matrix restricted to free DOFs
-                λ   : Lagrange multipliers
-                g   : constraint residual (C u - r)
-
-            The augmented Jacobian and residual are returned as:
-
-                K_aug = [[K_ff, C_f^T],
-                         [C_f,      0]]
-
-                R_aug = [R_f + C_f^T λ, g]
-
-            Returns
-            -------
-            (K_ff, R_f) : tuple[NDArray, NDArray]
-                If no constraint equations are present.
-
-            (K_aug, R_aug) : tuple[NDArray, NDArray]
-                If constraint equations are present, representing the
-                saddle-point system for the unknown vector [u_f, λ].
-
-            Notes
-            -----
-            - Dirichlet DOFs are enforced strongly and do not appear in the
-              Newton unknown vector.
-            - The system with constraints is symmetric but indefinite.
-            - Lagrange multipliers represent constraint reaction forces.
-            """
-            model.u[1, fdofs] = x[:nf]
-            model.u[1, ddofs] = dvals
-            du = model.u[1] - model.u[0]
-
-            time = [0, step.start]
-            dt = step.period
-            K, R = model.assemble(step, 1, time, dt, model.u[1], du)
-            for dof, value in self.nbcs:
-                R[dof] -= value
-            R_f = R[fdofs]
-            K_ff = K[np.ix_(fdofs, fdofs)]
-
-            if neq == 0:
-                return K_ff, R_f
-
-            C, r = build_linear_constraint(model.num_dof, self.equations)
-            C_f = C[:, fdofs]
-            g = np.dot(C, model.u[1]) - r
-            Ka = np.block([[K_ff, C_f.T], [C_f, np.zeros((neq, neq))]])
-            Ra = np.hstack([R_f + np.dot(C_f.T, x[nf:]), g])
-            return Ka, Ra
-
-        x0 = model.u[0, fdofs]
+        x0 = u0[fdofs]
         if neq > 0:
             x0 = np.hstack([x0, np.zeros(neq)])
 
-        n = model.num_dof
+        kernel = AssembleKernel(fun, u0)
         solver = NonlinearNewtonSolver()
         state = solver(
-            fun,
+            kernel,
             x0,
-            args=(model, self),
+            args=(self,),
             atol=self.solver_options.get("atol"),
             rtol=self.solver_options.get("rtol"),
             maxiter=self.solver_options.get("maxiter"),
         )
-        model.u[1, fdofs] = state.x[:nf]
-        model.u[1, ddofs] = dvals
-        K, R = model.assemble(
-            self, 1, [0, self.start], self.period, model.u[1], model.u[1] - model.u[0]
-        )
+
+        u = u0.copy()
+        u[fdofs] = state.x[:nf]
+        u[ddofs] = dvals
+        K, R = fun(self, 1, [0, self.start], self.period, u, u - u0)
         for dof, value in self.nbcs:
             R[dof] -= value
         react = np.zeros_like(R)
         react[ddofs] = R[ddofs]
         self.solution = Solution(
-            stiff=K[:n, :n],
-            force=R[:n],
-            dofs=model.u[1, :n].reshape((model.nnode, -1)),
-            react=react.reshape((model.nnode, -1)),
+            stiff=K[:ndof, :ndof],
+            force=R[:ndof],
+            dofs=u[:ndof],
+            react=react,
             lagrange_multipliers=state.x[nf:],
             iterations=state.iterations,
         )
 
-        return self.solution
+        return u
 
 
 def normalize(a: Sequence[float]) -> NDArray:
