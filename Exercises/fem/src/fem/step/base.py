@@ -77,7 +77,7 @@ class CompiledStep(ABC):
         self._solution: Solution | None = None
 
     @abstractmethod
-    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> NDArray: ...
+    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> tuple[NDArray, NDArray]: ...
 
     @property
     def solution(self) -> Solution:

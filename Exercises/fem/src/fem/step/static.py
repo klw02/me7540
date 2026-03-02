@@ -237,7 +237,7 @@ class StaticStep(Step):
 class CompiledStaticStep(CompiledStep):
     solver_options: dict[str, Any] = field(default_factory=dict)
 
-    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> NDArray:
+    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> tuple[NDArray, NDArray]:
         ddofs = self.ddofs
         ndof = len(u0)
         fdofs = np.array(sorted(set(range(ndof)) - set(ddofs)))
@@ -274,23 +274,12 @@ class CompiledStaticStep(CompiledStep):
             rtol=self.solver_options.get("rtol"),
             maxiter=self.solver_options.get("maxiter"),
         )
-
         u = u0.copy()
         u[fdofs] = state.x[:nf]
         u[ddofs] = self.dvals[1, :]
-        K, R = fun(
-            self.number,
-            increment,
-            time,
-            dt,
-            u,
-            u - u0,
-            self.dloads,
-            self.dsloads,
-            self.rloads,
-        )
-        for dof, value in self.nbcs:
-            R[dof] -= value
+
+        R = kernel.resid
+        K = kernel.stiff
         react = np.zeros_like(R)
         react[ddofs] = R[ddofs]
         self.solution = Solution(
@@ -302,7 +291,7 @@ class CompiledStaticStep(CompiledStep):
             iterations=state.iterations,
         )
 
-        return u
+        return u, react
 
 
 def normalize(a: Sequence[float]) -> NDArray:

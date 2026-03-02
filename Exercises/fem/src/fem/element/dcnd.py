@@ -112,7 +112,7 @@ class DCP3(P3, DCnD, IsoparametricElement):
         return B
 
     def history_variables(self) -> list[str]:
-        return ["q_x", "q_y"]
+        return ["qx", "qy"]
 
 
 class DCP4(P4, DCnD, IsoparametricElement):
@@ -143,4 +143,4 @@ class DCP4(P4, DCnD, IsoparametricElement):
         return B
 
     def history_variables(self) -> list[str]:
-        return ["q_x", "q_y"]
+        return ["qx", "qy"]

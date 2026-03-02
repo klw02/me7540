@@ -68,18 +68,13 @@ class Simulation:
         """
         file = ExodusFile(self.model)
         parent: CompiledStep | None = None
-        displ_mask = np.isin(self.model.dof_types, [constants.Ux, constants.Uy, constants.Uz])
-        temp_mask = self.model.dof_types == constants.T
         for i, step in enumerate(self.steps):
             cstep = step.compile(self.model, parent=parent)
-            self.dofs[1] = cstep.solve(self.model.assemble, self.dofs[0])
+            self.dofs[1], self.react[1] = cstep.solve(self.model.assemble, self.dofs[0])
             self.advance_state()
-            u = self.dofs[1, displ_mask]
-            temp = self.dofs[1, temp_mask]
-            file.update(i + 1, cstep, u, temp)
+            file.update(i + 1, cstep, self.dofs[1], self.react[1])
             parent = cstep
             self.csteps.append(cstep)
-
 
 class ExodusFile:
     """
@@ -167,16 +162,32 @@ class ExodusFile:
         file.put_time(1, 0.0)
         file.put_global_variable_values(1, np.zeros(1, dtype=float))
 
-        node_variable_params = [self.displ_name(i) for i in range(model.coords.shape[1])]
-        if constants.T in model.node_freedom_types:
+        self.umask = np.isin(model.dof_types, [constants.Ux, constants.Uy, constants.Uz])
+        self.tmask = model.dof_types == constants.T
+
+        node_variable_params: list[str] = []
+        ndim = model.coords.shape[1]
+        for dim in "xyz"[:ndim]:
+            node_variable_params.append(f"displ{dim}")
+        if np.any(self.umask):
+            for dim in "xyz"[:ndim]:
+                node_variable_params.append(f"react{dim}")
+        if np.any(self.tmask):
             node_variable_params.append("T")
+            node_variable_params.append("Q")
         file.put_node_variable_params(len(node_variable_params))
         file.put_node_variable_names(node_variable_params)
 
-        for i in range(model.coords.shape[1]):
-            file.put_node_variable_values(1, self.displ_name(i), np.zeros(model.coords.shape[0]))
+        zero = np.zeros(model.coords.shape[0])
+        for dim in "xyz"[:ndim]:
+            file.put_node_variable_values(1, f"displ{dim}", zero)
+        if np.any(self.umask):
+            for dim in "xyz"[:ndim]:
+                file.put_node_variable_values(1, f"react{dim}", zero)
+
         if "T" in node_variable_params:
-            file.put_node_variable_values(1, "T", np.zeros(model.coords.shape[0]))
+            file.put_node_variable_values(1, "T", zero)
+            file.put_node_variable_values(1, "Q", zero)
 
         # Write initial element variable values
         for j, block in enumerate(model.blocks):
@@ -186,7 +197,7 @@ class ExodusFile:
         self.file = file
         self.model = model
 
-    def update(self, step_no: int, step: CompiledStep, u: NDArray, temp: NDArray) -> None:
+    def update(self, step_no: int, step: CompiledStep, dofs: NDArray, react: NDArray) -> None:
         """
         Write updated values for a new time step.
 
@@ -199,21 +210,25 @@ class ExodusFile:
 
         file.put_time(step_no + 1, step.start + step.period)
 
-        stride = model.coords.shape[1]
+        ndim = model.coords.shape[1]
+        u = dofs[self.umask]
         if not u.size:
             u = np.zeros(model.coords.size)
-        for i in range(model.coords.shape[1]):
-            file.put_node_variable_values(step_no + 1, self.displ_name(i), u[i::stride])
-        if temp.size:
-            file.put_node_variable_values(step_no + 1, "T", temp)
+        for i in range(ndim):
+            dim = "xyz"[i]
+            file.put_node_variable_values(step_no + 1, f"displ{dim}", u[i::ndim])
+        if np.any(self.umask):
+            R = react[self.umask]
+            for i in range(ndim):
+                dim = "xyz"[i]
+                file.put_node_variable_values(step_no + 1, f"react{dim}", R[i::ndim])
+        if np.any(self.tmask):
+            file.put_node_variable_values(step_no + 1, "T", dofs[self.tmask])
+            file.put_node_variable_values(step_no + 1, "Q", react[self.tmask])
 
         for j, block in enumerate(model.blocks):
             for name, value in block.element_variable_values():
                 file.put_element_variable_values(step_no + 1, j + 1, name, value)
-
-    def displ_name(self, i: int) -> str:
-        """Generate node variable name for displacement dimension i."""
-        return f"displ{'xyz'[i]}"
 
 
 def str32(string: str) -> str:

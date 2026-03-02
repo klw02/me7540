@@ -201,7 +201,7 @@ class CPS3(CPX3):
         -------
         List of string labels.
         """
-        return ["strain_xx", "strain_yy", "strain_xy", "stress_xx", "stress_yy", "stress_xy"]
+        return ["exx", "eyy", "exy", "sxx", "syy", "sxy"]
 
 
 class CPE3(CPX3):
@@ -220,16 +220,7 @@ class CPE3(CPX3):
         return B
 
     def history_variables(self) -> list[str]:
-        return [
-            "strain_xx",
-            "strain_yy",
-            "strain_zz",
-            "strain_xy",
-            "stress_xx",
-            "stress_yy",
-            "stress_zz",
-            "stress_xy",
-        ]
+        return ["exx", "eyy", "ezz", "exy", "sxx", "syy", "szz", "sxy"]
 
 
 class CPX4(P4, CnD, IsoparametricElement):
@@ -272,7 +263,7 @@ class CPS4(CPX4):
         return B
 
     def history_variables(self) -> list[str]:
-        return ["strain_xx", "strain_yy", "strain_xy", "stress_xx", "stress_yy", "stress_xy"]
+        return ["exx", "eyy", "exy", "sxx", "syy", "sxy"]
 
 
 class CPE4(CPX4):
@@ -291,13 +282,4 @@ class CPE4(CPX4):
         return B
 
     def history_variables(self) -> list[str]:
-        return [
-            "strain_xx",
-            "strain_yy",
-            "strain_zz",
-            "strain_xy",
-            "stress_xx",
-            "stress_yy",
-            "stress_zz",
-            "stress_xy",
-        ]
+        return ["exx", "eyy", "ezz", "exy", "sxx", "syy", "szz", "sxy"]

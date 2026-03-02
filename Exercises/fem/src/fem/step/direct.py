@@ -42,7 +42,7 @@ class CompiledDirectStep(CompiledStep):
     No Newton iteration is performed.
     """
 
-    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> NDArray:
+    def solve(self, fun: Callable[..., tuple[NDArray, NDArray]], u0: NDArray) -> tuple[NDArray, NDArray]:
         ddofs = self.ddofs
         dvals = self.dvals[1, :]  # Target Dirichlet values at end of step
         ndof = len(u0)
@@ -81,20 +81,8 @@ class CompiledDirectStep(CompiledStep):
         u[fdofs] += state.x[:nf]
         u[ddofs] = dvals
 
-        # Reassemble to compute reactions
-        K, R = fun(
-            self.number,
-            increment,
-            time,
-            dt,
-            u,
-            u - u0,
-            self.dloads,
-            self.dsloads,
-            self.rloads,
-        )
-        for dof, value in self.nbcs:
-            R[dof] -= value
+        R = kernel.resid
+        K = kernel.stiff
         react = np.zeros_like(R)
         react[ddofs] = R[ddofs]
 
@@ -106,4 +94,4 @@ class CompiledDirectStep(CompiledStep):
             lagrange_multipliers=state.x[nf:],
             iterations=1,
         )
-        return u
+        return u, react

@@ -40,6 +40,8 @@ class AssemblyKernel:
         self.dsloads = dsloads
         self.rloads = rloads
         self.equations = equations
+        self.stiff: NDArray = np.empty(0, dtype=float)
+        self.resid: NDArray = np.empty(0, dtype=float)
 
     def __call__(self, x: NDArray):
         """
@@ -134,7 +136,7 @@ class AssemblyKernel:
         u[self.ddofs] = self.dvals
         du = u - self.u0
 
-        K, R = self.assemble_fun(
+        self.stiff, self.resid = self.assemble_fun(
             self.step,
             self.increment,
             self.time,
@@ -146,9 +148,9 @@ class AssemblyKernel:
             self.rloads,
         )
         for dof, value in self.nbcs:
-            R[dof] -= value
-        R_f = R[fdofs]
-        K_ff = K[np.ix_(fdofs, fdofs)]
+            self.resid[dof] -= value
+        R_f = self.resid[fdofs]
+        K_ff = self.stiff[np.ix_(fdofs, fdofs)]
 
         if neq == 0:
             return K_ff, R_f
